@@ -1,0 +1,28 @@
+[tasks]
+bmc
+prove
+cover
+
+[options]
+bmc:
+mode bmc
+depth 10
+
+prove:
+mode prove
+depth 10
+
+cover:
+mode cover
+depth 200
+--
+
+[engines]
+smtbmc
+
+[script]
+read -formal shift_register.v
+prep -top shift_register
+
+[files]
+../src/adwranovsky__shift_register_0.1/rtl/shift_register.v

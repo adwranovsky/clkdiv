@@ -1,0 +1,52 @@
+CAPI=2:
+
+name: adwranovsky::clkdiv:0.1
+
+filesets:
+    rtl:
+        files:
+            - rtl/clkdiv.v
+        file_type: systemVerilogSource
+    formal:
+        files:
+            - clkdiv.sby
+        file_type: sbyConfigTemplate
+
+targets:
+    default:
+        filesets: [rtl]
+    lint:
+        default_tool: verilator
+        filesets: [rtl]
+        toplevel: clkdiv
+        tools:
+            verilator:
+                mode: "lint-only"
+    quick_synth:
+        default_tool: yosys
+        filesets: [rtl]
+        toplevel: clkdiv
+        tools:
+            yosys:
+                arch: xilinx
+    bmc:
+        default_tool: symbiyosys
+        filesets: [rtl, formal]
+        toplevel: clkdiv
+        tools:
+            symbiyosys:
+                tasknames: [bmc]
+    prove:
+        default_tool: symbiyosys
+        filesets: [rtl, formal]
+        toplevel: clkdiv
+        tools:
+            symbiyosys:
+                tasknames: [prove]
+    cover:
+        default_tool: symbiyosys
+        filesets: [rtl, formal]
+        toplevel: clkdiv
+        tools:
+            symbiyosys:
+                tasknames: [cover]
