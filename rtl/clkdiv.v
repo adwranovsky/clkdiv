@@ -37,7 +37,7 @@ module clkdiv #(
 ) (
     input wire clk_i,
     input wire enable_i,
-    output wire clk_o
+    output reg clk_o
 );
 
     /*
@@ -55,11 +55,15 @@ module clkdiv #(
         past_clk_o <= clk_o;
 
     wire transition_to_idle;
+    wire idle_value;
     generate
-        if (IDLE_HIGH == 1)
+        if (IDLE_HIGH == 1) begin
+            assign idle_value = 1'b1;
             assign transition_to_idle = clk_o==1'b1 && past_clk_o==1'b0;
-        else
+        end else begin
+            assign idle_value = 1'b0;
             assign transition_to_idle = clk_o==1'b0 && past_clk_o==1'b1;
+        end
     endgenerate
 
 
@@ -67,10 +71,12 @@ module clkdiv #(
      * Create a counter for dividing the clock
      */
     localparam COUNTER_LIMIT = DIV-1;
+    localparam COUNTER_HALF  = DIV/2;
     localparam COUNTER_WIDTH = $clog2(DIV);
     reg [COUNTER_WIDTH-1:0] counter;
     reg restart_counter;
-    wire counter_reached_div = counter == COUNTER_LIMIT[COUNTER_WIDTH-1:0];
+    wire counter_reached_end  = counter >= COUNTER_LIMIT[COUNTER_WIDTH-1:0];
+    wire counter_reached_half = counter >= COUNTER_HALF[COUNTER_WIDTH-1:0];
     initial counter = 0;
     always @(posedge clk_i)
         if (restart_counter)
@@ -96,7 +102,7 @@ module clkdiv #(
         state <= next_state;
 
     // state transition logic
-    always @(posedge clk_i) begin
+    always @(*) begin
         next_state = state;
         case (state)
             IDLE:
@@ -106,23 +112,30 @@ module clkdiv #(
                 if (!enable_i && transition_to_idle)
                     next_state = COOLDOWN;
             COOLDOWN:
-                if (counter_reached_div)
+                if (counter_reached_end)
                     next_state = IDLE;
             default:
-                next_state = state;
+                next_state = IDLE;
         endcase
     end
 
     // state machine io
-    always @(posedge clk_i) begin
+    always @(*) begin
+        restart_counter = 0;
+        clk_o = idle_value;
+        // verilator lint_off CASEINCOMPLETE
         case (state)
             IDLE: begin
+                restart_counter = enable_i;
             end
             RUNNING: begin
+                restart_counter = counter_reached_end;
+                clk_o = ~(counter_reached_half ^ idle_value);
             end
             COOLDOWN: begin
             end
         endcase
+        // verilator lint_on CASEINCOMPLETE
     end
 
 `ifdef FORMAL
@@ -140,6 +153,10 @@ module clkdiv #(
         );
 
     // Verify that the clk_o doesn't change state any faster than half of the clock period
+
+    // Verify clk_o isn't doing anything in the IDLE and COOLDOWN states
+    always @(*)
+        assert(clk_o == idle_value);
 `endif
 
 endmodule
