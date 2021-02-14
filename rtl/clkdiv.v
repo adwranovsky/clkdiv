@@ -139,14 +139,49 @@ module clkdiv #(
     end
 
 `ifdef FORMAL
+    /*
+     * Supporting logic for the formal properties
+     */
+
     // Keep track of whether or not $past() is valid
     reg f_past_valid = 0;
     always @(posedge clk_i)
         f_past_valid <= 1;
+
     // Keep track of the simulation time
     integer f_time = 0;
     always @(posedge clk_i)
         f_time <= f_time + 1;
+
+    // Keep track of the last value of clk_o
+    reg f_last_value;
+    always @(posedge clk_i) begin
+        f_last_value <= clk_o;
+    end
+
+    // Find when clk_o transitions
+    wire f_transitioned = f_last_value ^ clk_o;
+
+    // Record the length of time that clk_o stays in any particular state
+    integer f_period_counter = 1;
+    always @(posedge clk_i) begin
+        f_last_value <= clk_o;
+        if (f_transitioned) begin
+            f_period_counter <= 1;
+        end else if (f_period_counter == {COUNTER_WIDTH{1'b1}})
+            f_period_counter <= f_period_counter; // saturate the counter, don't rollover
+        else
+            f_period_counter <= f_period_counter + 1;
+    end
+
+    /*
+     * Formal properties
+     */
+
+    // Assume we don't start the simulation on a clk_o transition
+    always @(*)
+        if (!f_past_valid)
+            assume(f_transitioned == 0);
 
     // Verify that "state" is always valid
     always @(*)
@@ -156,26 +191,16 @@ module clkdiv #(
             state == COOLDOWN
         );
 
-    // Verify that the clk_o doesn't change state any faster than half of the clock period
-    integer f_period_counter = 1;
-    reg f_last_value;
-    wire f_transitioned = f_last_value ^ clk_o;
-    always @(posedge clk_i) begin
-        f_last_value <= clk_o;
-        if (f_transitioned) begin
-            f_period_counter <= 0;
-            if (f_time >= DIV/2)
-                assert(f_period_counter >= DIV/2);
-        end else if (f_period_counter == {COUNTER_WIDTH{1'b1}})
-            f_period_counter <= f_period_counter; // saturate the counter, don't rollover
-        else
-            f_period_counter <= f_period_counter + 1;
-    end
-
     // Verify clk_o isn't doing anything in the IDLE and COOLDOWN states
     always @(*)
         if (state==IDLE || state==COOLDOWN)
             assert(clk_o == idle_value);
+
+    // Verify that clk_o hasn't transitioned any faster than half of the clock period. We make an exception for the
+    // beginning of the simulation, when clk_o may transition as soon as enable_i is brought high.
+    always @(*)
+        if (f_transitioned && f_time >= DIV/2)
+            assert(f_period_counter >= DIV/2);
 
     // Generate a testbench that has the output clock completing at 20 periods, and has the enable signal toggling
     // 5 times
