@@ -21,8 +21,8 @@ depth 200
 smtbmc
 
 [script]
-read -formal shift_register.v
-prep -top shift_register
+read -formal clkdiv.v
+prep -top clkdiv
 
 [files]
-../src/adwranovsky__shift_register_0.1/rtl/shift_register.v
+../src/adwranovsky__clkdiv_0.1/rtl/clkdiv.v

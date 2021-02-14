@@ -143,6 +143,10 @@ module clkdiv #(
     reg f_past_valid = 0;
     always @(posedge clk_i)
         f_past_valid <= 1;
+    // Keep track of the simulation time
+    integer f_time = 0;
+    always @(posedge clk_i)
+        f_time <= f_time + 1;
 
     // Verify that "state" is always valid
     always @(*)
@@ -153,10 +157,39 @@ module clkdiv #(
         );
 
     // Verify that the clk_o doesn't change state any faster than half of the clock period
+    integer f_period_counter = 1;
+    reg f_last_value;
+    wire f_transitioned = f_last_value ^ clk_o;
+    always @(posedge clk_i) begin
+        f_last_value <= clk_o;
+        if (f_transitioned) begin
+            f_period_counter <= 0;
+            if (f_time >= DIV/2)
+                assert(f_period_counter >= DIV/2);
+        end else if (f_period_counter == {COUNTER_WIDTH{1'b1}})
+            f_period_counter <= f_period_counter; // saturate the counter, don't rollover
+        else
+            f_period_counter <= f_period_counter + 1;
+    end
 
     // Verify clk_o isn't doing anything in the IDLE and COOLDOWN states
     always @(*)
-        assert(clk_o == idle_value);
+        if (state==IDLE || state==COOLDOWN)
+            assert(clk_o == idle_value);
+
+    // Generate a testbench that has the output clock completing at 20 periods, and has the enable signal toggling
+    // 5 times
+    integer f_num_clks = 0;
+    integer f_num_enable_toggles = 0;
+    always @(posedge clk_i)
+        if (f_past_valid) begin
+            if ($rose(clk_o))
+                f_num_clks <= f_num_clks + 1;
+            if ($changed(enable_i))
+                f_num_enable_toggles <= f_num_enable_toggles + 1;
+        end
+    always @(*)
+        cover(f_num_enable_toggles == 5 && f_num_clks == 20);
 `endif
 
 endmodule
