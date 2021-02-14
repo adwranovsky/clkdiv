@@ -201,6 +201,9 @@ module clkdiv #(
     always @(*)
         if (f_transitioned && f_time >= DIV/2)
             assert(f_period_counter >= DIV/2);
+    // Ensure that f_period_counter itself always remains valid
+    always @(*)
+        assert(f_period_counter > 0 && f_period_counter <= {COUNTER_WIDTH{1'b1}});
 
     // Generate a testbench that has the output clock completing at 20 periods, and has the enable signal toggling
     // 5 times
