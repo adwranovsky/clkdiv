@@ -156,13 +156,27 @@ module clkdiv #(
     // Record the length of time that clk_o stays in any particular state
     integer f_period_counter = 1;
     always @(posedge clk_i) begin
-        if (f_past_valid && $changed(clk_o)) begin
+        if (f_past_valid && $changed(clk_o))
             f_period_counter <= 1;
-        end else if (f_period_counter == {COUNTER_WIDTH{1'b1}})
+        else if (f_period_counter == {COUNTER_WIDTH{1'b1}})
             f_period_counter <= f_period_counter; // saturate the counter, don't rollover
         else
             f_period_counter <= f_period_counter + 1;
     end
+
+    // Record the length of time that enable_i stays in the low state
+    integer f_enable_counter = 1;
+    always @(posedge clk_i)
+        if (f_past_valid && $fell(enable_i))
+            f_enable_counter <= 1;
+        else
+            f_enable_counter <= f_enable_counter + 1;
+
+    // Record the longest time that enable_i has been low
+    integer f_longest_enable_low = 0;
+    always @(posedge clk_i)
+        if (f_past_valid && $rose(enable_i) && f_enable_counter > f_longest_enable_low)
+            f_longest_enable_low <= f_enable_counter;
 
     /*
      * Formal properties
@@ -192,7 +206,7 @@ module clkdiv #(
         assert(f_period_counter > 0 && f_period_counter <= {COUNTER_WIDTH{1'b1}});
 
     // Generate a testbench that has the output clock completing 10 periods, and has the enable signal toggling
-    // 5 times. Ensure that the 
+    // 5 times. Ensure that the enable_i signal was low for at least 2 periods one time
     integer f_num_clks = 0;
     integer f_num_enable_toggles = 0;
     always @(posedge clk_i)
@@ -203,7 +217,7 @@ module clkdiv #(
                 f_num_enable_toggles <= f_num_enable_toggles + 1;
         end
     always @(*)
-        cover(f_num_enable_toggles == 5 && f_num_clks == 20);
+        cover(f_num_enable_toggles == 5 && f_num_clks == 10 && f_longest_enable_low >= DIV*2);
 `endif
 
 endmodule
