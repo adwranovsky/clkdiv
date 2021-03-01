@@ -22,7 +22,8 @@ smtbmc
 
 [script]
 read -formal clkdiv.v
+chparam -set COVER 1 clkdiv
 prep -top clkdiv
 
 [files]
-../src/adwranovsky__clkdiv_0.1/rtl/clkdiv.v
+../src/adwranovsky__clkdiv_0.2/rtl/clkdiv.v

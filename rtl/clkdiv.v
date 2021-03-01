@@ -33,7 +33,8 @@
  */
 module clkdiv #(
     parameter DIV = 8,
-    parameter IDLE_HIGH = 1
+    parameter IDLE_HIGH = 1,
+    parameter COVER = 0
 ) (
     input wire clk_i,
     input wire enable_i,
@@ -216,8 +217,10 @@ module clkdiv #(
             if ($changed(enable_i))
                 f_num_enable_toggles <= f_num_enable_toggles + 1;
         end
-    always @(*)
-        cover(f_num_enable_toggles == 5 && f_num_clks == 10 && f_longest_enable_low >= DIV*2);
+    generate if (COVER==1) begin
+        always @(*)
+            cover(f_num_enable_toggles == 5 && f_num_clks == 10 && f_longest_enable_low >= DIV*2);
+    end endgenerate
 `endif
 
 endmodule

@@ -1,6 +1,6 @@
 CAPI=2:
 
-name: adwranovsky::clkdiv:0.1
+name: adwranovsky::clkdiv:0.2
 
 filesets:
     rtl:
@@ -50,3 +50,20 @@ targets:
         tools:
             symbiyosys:
                 tasknames: [cover]
+
+parameters:
+    DIV:
+        datatype: int
+        default: 8
+        description: The amount to divide the input clock by
+        paramtype: vlogparam
+    IDLE_HIGH:
+        datatype: int
+        default: 1
+        description: The value that the clock output idles at, either 1 or 0
+        paramtype: vlogparam
+    COVER:
+        datatype: int
+        default: 0
+        description: If set to 1, cover properties for formal verification are included
+        paramtype: vlogparam
