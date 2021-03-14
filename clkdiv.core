@@ -1,6 +1,6 @@
 CAPI=2:
 
-name: adwranovsky::clkdiv:0.2
+name: adwranovsky:blips:clkdiv:0.2
 
 filesets:
     rtl:
