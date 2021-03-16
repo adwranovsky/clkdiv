@@ -6,6 +6,7 @@
  * Parameters:
  *  DIV - The amount to divide clk_i by, the default is 8
  *  IDLE_HIGH - When 1, clk_o will idle high, and idles low otherwise. The default is 1.
+ *  COVER - For testing use only. Set to 1 to include cover properties during formal verification
  *
  * Ports:
  *  clk_i - The system clock
