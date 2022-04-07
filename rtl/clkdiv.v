@@ -11,6 +11,7 @@
  * Ports:
  *  clk_i - The system clock
  *  enable_i - When high, enables clk_o
+ *  idle_o - When high, clk_o is idle and setting enable_i will begin oscillation again
  *  clk_o - The output clock, with a frequency that is the frequency of clk_i divided by DIV
  *
  * Description:
@@ -30,7 +31,7 @@
  *  enable_i, and clk_o will always be the value specified by IDLE_HIGH.
  *
  *  If you require a clock for digital logic within the FPGA, I recommend looking into the clocking, buffer, and PLL
- *  primitives provided by your FPGA vendor instead. 
+ *  primitives provided by your FPGA vendor instead.
  */
 module clkdiv #(
     parameter DIV = 8,
@@ -39,6 +40,7 @@ module clkdiv #(
 ) (
     input wire clk_i,
     input wire enable_i,
+    output reg idle_o,
     output reg clk_o
 );
 
@@ -125,9 +127,11 @@ module clkdiv #(
     always @(*) begin
         restart_counter = 0;
         clk_o = idle_value;
+        idle_o = 0;
         // verilator lint_off CASEINCOMPLETE
         case (state)
             IDLE: begin
+                idle_o = 1;
                 restart_counter = enable_i;
             end
             RUNNING: begin
